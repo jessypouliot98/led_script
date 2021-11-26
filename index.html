@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Document</title>
+</head>
+<body style="height: 100vh">
+	<h1>LED Example</h1>
+	<div>
+		<canvas></canvas>
+	</div>
+	<script>
+		function clamp(min, value, max) {
+			return Math.max(min, Math.min(value, max));
+		}
+
+		function wait(ms) {
+			return new Promise(resolve => setTimeout(resolve, ms));
+		}
+
+		const DIRECTION = {
+			Up: 'up',
+			Down: 'down',
+		};
+	</script>
+	<script>
+		const LIGHTS_PER_STRUCTURE = 25;
+		const STRUCTURE_COUNT = 5;
+		const LIGHT_COUNT = LIGHTS_PER_STRUCTURE * STRUCTURE_COUNT;
+
+		const BRIGHTNESS_MIN = 0.25;
+		const BRIGHTNESS_MAX = 1;
+		const BRIGHTNESS_INC = 0.01;
+		const BRIGHTNESS_PAUSE_MS = 2000;
+
+		const COLOR_MIN = 0;
+		const COLOR_MAX = 1;
+
+		const SPACING_Y = 7;
+
+		let isBrightnessPaused = false;
+		let lightSize = 25;
+		let brightness = 1;
+		let direction = DIRECTION.Up;
+		let offset = 0;
+
+		const canvas = document.querySelector('canvas');
+		canvas.style.width = window.innerWidth;
+		canvas.style.height = window.innerHeight;
+		canvas.width = window.innerWidth;
+		canvas.height = window.innerHeight;
+
+		const ctx = canvas.getContext('2d');
+		const { width, height } = canvas;
+		console.log({ width, height })
+	</script>
+	<script>
+		async function draw() {
+			// Reset pixels
+			ctx.clearRect(0, 0, width, height);
+			//
+			for (let i = 0; i < STRUCTURE_COUNT; i++) {
+				for (let j = 0; j < LIGHTS_PER_STRUCTURE; j++) {
+					// Choose color position
+					const posOffset = Math.floor(offset);
+					const posX = (j + posOffset) % LIGHTS_PER_STRUCTURE;
+					const posY = STRUCTURE_COUNT - (i + posOffset) % STRUCTURE_COUNT;
+
+					const isOdd = i % 2 === 1;
+
+					// Set structure color scheme
+					const rgb = isOdd ? { // Blue
+						r: 55,
+						g: 135,
+						b: 210,
+					} : { // Orange
+						r: 255,
+						g: 153,
+						b: 0,
+					};
+
+					// Set color with position
+					const getIntensity = (value) => {
+						return value / LIGHTS_PER_STRUCTURE * ((posX + posY) / 2);
+					};
+
+					const red = clamp(
+						rgb.r * COLOR_MIN,
+						getIntensity(rgb.r),
+						rgb.r * COLOR_MAX,
+					);
+					const green = clamp(
+						rgb.g * COLOR_MIN,
+						getIntensity(rgb.g),
+						rgb.g * COLOR_MAX,
+					);
+					const blue = clamp(
+						rgb.b * COLOR_MIN,
+						getIntensity(rgb.b),
+						rgb.b * COLOR_MAX,
+					);
+
+					// Set color with brightness
+					ctx.fillStyle = `rgb(${red * brightness}, ${green * brightness}, ${blue * brightness})`;
+
+					ctx.fillRect(
+						j * lightSize,
+						i * lightSize + i * SPACING_Y,
+						lightSize,
+						lightSize,
+					);
+				}
+			}
+		}
+
+		async function update() {
+			offset += 0.1;
+			
+			if (!isBrightnessPaused) {
+				if (direction === DIRECTION.Up) {
+					brightness = clamp(BRIGHTNESS_MIN, brightness + BRIGHTNESS_INC, BRIGHTNESS_MAX);
+				} else {
+					brightness = clamp(BRIGHTNESS_MIN, brightness - BRIGHTNESS_INC, BRIGHTNESS_MAX);
+				}
+
+				if (brightness >= BRIGHTNESS_MAX) {
+					direction = DIRECTION.Down;
+					isBrightnessPaused = true;
+					setTimeout(() => {
+						isBrightnessPaused = false;
+					}, BRIGHTNESS_PAUSE_MS);
+				} else if (brightness <= BRIGHTNESS_MIN) {
+					direction = DIRECTION.Up;
+				}
+			}
+		}
+	</script>
+	<script>
+		async function loop() {
+			// await wait(25);
+			await draw(); // set pixel colors
+			await update(); // handle changes over time
+
+			requestAnimationFrame(loop);
+		}
+
+		loop();
+	</script>
+</body>
+</html>
